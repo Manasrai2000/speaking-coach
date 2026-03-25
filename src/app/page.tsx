@@ -6,6 +6,51 @@ import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Mic, Loader2, Volume2, Clipboard, StopCircle, ArrowUp, VolumeX } from "lucide-react";
 
+// Speech Recognition types
+interface SpeechRecognitionResult {
+  readonly length: number;
+  [index: number]: {
+    readonly transcript: string;
+    readonly confidence: number;
+  };
+}
+
+interface SpeechRecognitionResultList {
+  readonly length: number;
+  [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionEvent extends Event {
+  readonly resultIndex: number;
+  readonly results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  readonly error: string;
+}
+
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onstart: (event: Event) => void;
+  onresult: (event: SpeechRecognitionEvent) => void;
+  onerror: (event: SpeechRecognitionErrorEvent) => void;
+  onend: (event: Event) => void;
+  start(): void;
+  stop(): void;
+}
+
+interface WindowWithSpeech extends Window {
+  SpeechRecognition?: {
+    new (): SpeechRecognition;
+  };
+  webkitSpeechRecognition?: {
+    new (): SpeechRecognition;
+  };
+}
+
+
 type Message = {
   id: string;
   role: "user" | "coach";
@@ -20,7 +65,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
 
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputTextRef = useRef(""); // To access latest state in speech callbacks
 
@@ -38,7 +83,8 @@ export default function Home() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const win = window as unknown as WindowWithSpeech;
+      const SpeechRecognition = win.SpeechRecognition || win.webkitSpeechRecognition;
       if (SpeechRecognition) {
         const recognition = new SpeechRecognition();
         recognition.continuous = false; // Stop when the user stops talking
@@ -49,7 +95,7 @@ export default function Home() {
           setIsRecording(true);
         };
 
-        recognition.onresult = (event: any) => {
+        recognition.onresult = (event: SpeechRecognitionEvent) => {
           let currentTranscript = "";
           for (let i = event.resultIndex; i < event.results.length; i++) {
             currentTranscript += event.results[i][0].transcript;
@@ -57,7 +103,7 @@ export default function Home() {
           setInputText(currentTranscript);
         };
 
-        recognition.onerror = (event: any) => {
+        recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
           // Gracefully handle "no-speech" error which occurs when nothing is said within timeout
           if (event.error !== "no-speech") {
             console.error("Speech recognition error", event.error);
