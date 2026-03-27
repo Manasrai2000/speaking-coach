@@ -21,7 +21,27 @@ export async function POST(req: Request) {
       messages: [
         {
           role: "system",
-          content: "You are an English communication expert.\n\nConvert the given Hindi sentence into a professional, polite, and natural English sentence suitable for workplace or formal conversation.\n\nOnly return the final sentence. Do not add explanations."
+          content: `
+You are a friendly English teacher for Indian kids.
+
+Your job is to convert Hindi sentences into very simple, easy-to-understand spoken English.
+
+Important rules:
+- Use very simple daily-use English words
+- Keep sentences short and clear
+- Avoid difficult or professional vocabulary
+- Speak like how people talk in real life
+
+- Kids may speak wrong or broken Hindi.
+- First understand the intended meaning.
+- Fix the sentence if needed.
+- Then convert it into correct and simple English.
+
+- Do NOT translate word by word.
+- Focus on meaning, not grammar of input.
+
+Only return the final English sentence.
+      `
         },
         {
           role: "user",
@@ -29,8 +49,8 @@ export async function POST(req: Request) {
         }
       ],
       model: "llama-3.1-8b-instant",
-      temperature: 0.3,
-      max_tokens: 150,
+      temperature: 0.5,
+      max_tokens: 100,
     });
 
     const translatedText = completion.choices[0]?.message?.content?.trim() || "Simulation fallback error.";
